@@ -20,6 +20,35 @@ window.onload = function () {
 
 ---
 
+## CRITICAL: SDK Methods Usage
+
+**STRICT RULE:** Only use SDK methods that are **documented in these SDK rules**. Do NOT use undocumented or unnecessary SDK methods.
+
+### Allowed SDK Methods (Documented):
+
+1. **ZFAPPS.get()** - Get data from Zoho Books
+2. **ZFAPPS.set()** - Set data in Zoho Books
+3. **ZFAPPS.request()** - Make API calls
+4. **ZFAPPS.invoke('SHOW_NOTIFICATION', ...)** - Show notifications (error/success messages)
+5. **ZFAPPS.invoke('RESIZE', ...)** - Resize widget (for button/modal widgets only)
+6. **ZFAPPS.closeModal()** - Close modal (for button/modal widgets only)
+7. **Event Listeners** - `zapp.instance.on('EVENT_NAME', ...)` - Listen to Zoho Books events
+
+### ❌ DO NOT Use:
+
+- **ZFAPPS.invoke('OPEN_MODULE', ...)** - NOT documented, do NOT use
+- Any other undocumented SDK methods
+- SDK methods not mentioned in these rules
+
+**Important:**
+- **ONLY use SDK methods documented in these rules**
+- **Do NOT add unnecessary SDK method calls**
+- **Do NOT use undocumented methods** even if they might work
+- If you need a feature, check if it's documented in SDK rules first
+- If not documented, do NOT implement it
+
+---
+
 ## Making API Calls Using SDK
 
 When making API calls through the Zoho Finance SDK, please refer to the [official documentation](https://www.zoho.com/books/developer/widgets/sdk-method.html#request).
@@ -146,6 +175,94 @@ if (parsedResponse && parsedResponse.contact) {
 ```
 
 **Important:** Always use `parseApiResponse()` helper function before accessing response data from Zoho Finance API calls.
+
+---
+
+## Showing Notifications (Error and Success Messages)
+
+**Important:** Use the Notification utility for all user-facing messages. **Do NOT create separate components** to show error or success messages - the Notification SDK handles this automatically.
+
+
+**Implementation:**
+
+```javascript
+const Notification = {
+	async show(type, message) {
+		try {
+			const res = await window.ZFAPPS.invoke('SHOW_NOTIFICATION', {
+				type,
+				message
+			});
+			console.log('success', res);
+		} catch (err) {
+			console.error('error', err);
+		}
+	},
+	async showSuccessMsg(message) {
+		await Notification.show('success', message);
+	},
+	async showErrorsMsg(message) {
+		await Notification.show('error', message);
+	}
+};
+```
+
+### When to Use Notifications
+
+**Use `Notification.showErrorsMsg()` for:**
+- API call failures
+- Validation errors
+- Business logic errors
+- Any error that needs user attention
+
+**Use `Notification.showSuccessMsg()` for:**
+- Successful operations
+- Data saved successfully
+- Actions completed successfully
+
+### Example:  Handling in API Calls
+
+```javascript
+
+async function fetchData() {
+    try {
+        const response = await ZFAPPS.request({
+            url: api_root_endpoint + "/contacts?organization_id=" + organization_id,
+            method: "GET",
+            connection_link_name: "books"
+        });
+        
+        const parsedResponse = JSON.parse(response.data.body);
+        
+        // Check for API error response
+        if (parsedResponse.code) {
+            await Notification.showErrorsMsg(parsedResponse.message);
+            return null;
+        }
+        
+        return parsedResponse;
+    } catch (error) {
+        // Show error notification
+        await Notification.showErrorsMsg(error.message || 'An error occurred while fetching data');
+        return null;
+    }
+}
+```
+
+### Important Rules:
+
+1. **Always use Notification utility** - Never create custom error/success message components
+2. **Handle errors gracefully** - Always show user-friendly error messages
+3. **Use in services** - Handle notifications in service layer, not in components
+4. **Provide clear messages** - Error messages should be descriptive and actionable
+5. **Don't throw errors to users** - Catch errors and show notifications instead
+
+### Notification Types:
+
+- `'error'` - Red error notification (default for errors)
+- `'success'` - Green success notification (default for success)
+
+**Note:** The Notification utility uses `ZFAPPS.invoke('SHOW_NOTIFICATION', ...)` internally, which displays notifications in Zoho's native UI. No additional HTML or components are needed.
 
 ---
 
@@ -286,7 +403,7 @@ zapp.instance.on("ON_CUSTOMER_PREVIEW", async (customer) => {
   - `estimate.list.sidebar` → Use `ZFAPPS.get("estimates")` (not `"estimate"`)
 
 - **Details/Creation Pages:** Use singular form
-  - `customer.details.sidebar` → Use `ZFAPPS.get("customer")`
+  - `customer.details.sidebar` → Use `ZFAPPS.get("contact")`  (not `"customer"` or `"customers"`)`
   - `invoice.creation.sidebar` → Use `ZFAPPS.get("invoice")`
   - `vendor.details.sidebar` → Use `ZFAPPS.get("vendor")`
 

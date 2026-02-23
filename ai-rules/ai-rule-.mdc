@@ -38,3 +38,4 @@ AI assistants must follow the rules defined in this file and in the additional r
 ## Related Rule Files
 - [SDK Rules](AI-rules/sdk.mdc)
 - [Location Rules](AI-rules/location.mdc)
+- [Vue.js Widget Rules](AI-rules/vue.mdc) - **Use this for all Vue.js widget development**
