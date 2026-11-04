@@ -1,0 +1,564 @@
+---
+description: Zoho Finance SDK usage rules for widgets
+alwaysApply: true
+---
+
+# SDK Rules
+
+## Initialization
+
+When starting your JavaScript file, you must first initialize the widget using the `ZFAPPS.extension.init()` method.  
+All SDK methods and business logic should be written **inside** the `init()` callback.
+
+### Example
+
+```javascript
+window.onload = function () {
+    ZFAPPS.extension.init().then(async (zapp) => {
+        // Write SDK methods and business logic here
+    });
+};
+```
+
+---
+
+## CRITICAL: SDK Methods Usage
+
+**STRICT RULE:** Only use SDK methods that are **documented in these SDK rules**. Do NOT use undocumented or unnecessary SDK methods.
+
+### Allowed SDK Methods (Documented):
+
+1. **ZFAPPS.get()** - Get data from Zoho Books
+2. **ZFAPPS.set()** - Set data in Zoho Books
+3. **ZFAPPS.request()** - Make API calls
+4. **ZFAPPS.invoke('SHOW_NOTIFICATION', ...)** - Show notifications (error/success messages)
+5. **ZFAPPS.invoke('RESIZE', ...)** - Resize widget (for button/modal widgets only)
+6. **ZFAPPS.closeModal()** - Close modal (for button/modal widgets only)
+7. **Event Listeners** - `zapp.instance.on('EVENT_NAME', ...)` - Listen to Zoho Books events
+
+### ❌ DO NOT Use:
+
+- **ZFAPPS.invoke('OPEN_MODULE', ...)** - NOT documented, do NOT use
+- Any other undocumented SDK methods
+- SDK methods not mentioned in these rules
+
+**Important:**
+- **ONLY use SDK methods documented in these rules**
+- **Do NOT add unnecessary SDK method calls**
+- **Do NOT use undocumented methods** even if they might work
+- If you need a feature, check if it's documented in SDK rules first
+- If not documented, do NOT implement it
+
+---
+
+## Making API Calls Using SDK
+
+When making API calls through the Zoho Finance SDK, please refer to the [official documentation](https://www.zoho.com/books/developer/widgets/sdk-method.html#request).
+
+### Example (GET Request)
+
+```javascript
+let response = await ZFAPPS.request({
+    url: api_root_endpoint + "/contacts?organization_id=" + organization_id,
+    method: "GET",
+    connection_link_name: "books"
+});
+console.log(response);
+```
+
+### Example (POST/PUT Request with Body)
+
+```javascript
+let response = await ZFAPPS.request({
+    url: api_root_endpoint + "/invoices/" + invoice_id + "?organization_id=" + organization_id,
+    method: "PUT",
+    connection_link_name: "books",
+    body: {
+        mode: "raw",
+        raw: JSON.stringify(data)
+    }
+});
+```
+
+### Important:
+
+1. **Organization Data:** The values of `organization_id` and `api_root_endpoint` are fetched using the `ZFAPPS.get("organization")` method.
+
+```javascript
+const { organization: { organization_id, api_root_endpoint, org_name } } = await ZFAPPS.get("organization");
+```
+
+2. **Connection Link Name:** 
+   - `connection_link_name` is **NOT** a contact name or "books" by default
+   - It is a **user-defined connection name** that you configure in your extension
+   - The connection name can be different based on user perspective/configuration
+   - **If you use `connection_link_name` in your API calls, you MUST add it to the `usedConnections` array in `plugin-manifest.json`**
+
+```json
+{
+  "usedConnections": [
+   {
+      "connectionLinkName": "books",
+    },{
+        "connectionLinkName":"something"
+    }
+  ]
+}
+```
+
+3. **Request Body Format:**
+   - The `body` parameter must be an **object** with `mode` and `raw` properties
+   - `mode` can be: `"raw"`, `"formdata"`, `"urlencoded"`, etc.
+   - For JSON data, use `mode: "raw"` and `raw: JSON.stringify(yourData)`
+   - **Do NOT** pass body as a plain string - always use the object format
+
+```javascript
+// Correct format:
+body: {
+    mode: "raw",
+    raw: JSON.stringify({ date: "2024-01-15" })
+}
+
+// Incorrect format:
+body: JSON.stringify({ date: "2024-01-15" })  // ❌ Wrong
+```
+
+4. **API Response Parsing:**
+   - Zoho Finance API responses are wrapped in `response.data.body`
+   - Always parse the response from `response.data.body` before accessing data
+   - Check if `response.data.body` is a string (needs JSON.parse) or already an object
+   - Use a helper function to handle response parsing consistently
+
+```javascript
+/**
+ * Parse API response from Zoho Finance API
+ * @param {Object} response - API response object
+ * @returns {Object} Parsed response data
+ */
+function parseApiResponse(response) {
+    if (!response) {
+        return null;
+    }
+
+    // Check if response has data.body (Zoho Finance API format)
+    if (response.data && response.data.body) {
+        try {
+            // Check if it's already an object or needs parsing
+            if (typeof response.data.body === 'string') {
+                return JSON.parse(response.data.body);
+            } else if (typeof response.data.body === 'object') {
+                return response.data.body;
+            }
+        } catch (error) {
+            console.error('Error parsing API response:', error);
+            return null;
+        }
+    }
+
+    // Fallback: return response as-is if no data.body structure
+    return response;
+}
+
+// Usage example:
+const response = await ZFAPPS.request({
+    url: api_root_endpoint + "/contacts/" + customer_id + "?organization_id=" + organization_id,
+    method: "GET",
+    connection_link_name: "books"
+});
+
+// Parse the response
+const parsedResponse = parseApiResponse(response);
+
+// Now access the data
+if (parsedResponse && parsedResponse.contact) {
+    const contact = parsedResponse.contact;
+    // Use contact data...
+}
+```
+
+**Important:** Always use `parseApiResponse()` helper function before accessing response data from Zoho Finance API calls.
+
+---
+
+## Showing Notifications (Error and Success Messages)
+
+**Important:** Use the Notification utility for all user-facing messages. **Do NOT create separate components** to show error or success messages - the Notification SDK handles this automatically.
+
+
+**Implementation:**
+
+```javascript
+const Notification = {
+	async show(type, message) {
+		try {
+			const res = await window.ZFAPPS.invoke('SHOW_NOTIFICATION', {
+				type,
+				message
+			});
+			console.log('success', res);
+		} catch (err) {
+			console.error('error', err);
+		}
+	},
+	async showSuccessMsg(message) {
+		await Notification.show('success', message);
+	},
+	async showErrorsMsg(message) {
+		await Notification.show('error', message);
+	}
+};
+```
+
+### When to Use Notifications
+
+**Use `Notification.showErrorsMsg()` for:**
+- API call failures
+- Validation errors
+- Business logic errors
+- Any error that needs user attention
+
+**Use `Notification.showSuccessMsg()` for:**
+- Successful operations
+- Data saved successfully
+- Actions completed successfully
+
+### Example:  Handling in API Calls
+
+```javascript
+
+async function fetchData() {
+    try {
+        const response = await ZFAPPS.request({
+            url: api_root_endpoint + "/contacts?organization_id=" + organization_id,
+            method: "GET",
+            connection_link_name: "books"
+        });
+        
+        const parsedResponse = JSON.parse(response.data.body);
+        
+        // Check for API error response
+        if (parsedResponse.code) {
+            await Notification.showErrorsMsg(parsedResponse.message);
+            return null;
+        }
+        
+        return parsedResponse;
+    } catch (error) {
+        // Show error notification
+        await Notification.showErrorsMsg(error.message || 'An error occurred while fetching data');
+        return null;
+    }
+}
+```
+
+### Important Rules:
+
+1. **Always use Notification utility** - Never create custom error/success message components
+2. **Handle errors gracefully** - Always show user-friendly error messages
+3. **Use in services** - Handle notifications in service layer, not in components
+4. **Provide clear messages** - Error messages should be descriptive and actionable
+5. **Don't throw errors to users** - Catch errors and show notifications instead
+
+### Notification Types:
+
+- `'error'` - Red error notification (default for errors)
+- `'success'` - Green success notification (default for success)
+
+**Note:** The Notification utility uses `ZFAPPS.invoke('SHOW_NOTIFICATION', ...)` internally, which displays notifications in Zoho's native UI. No additional HTML or components are needed.
+
+---
+
+## Button and Modal Widgets
+
+If the widget is a **Button Widget** or **Modal Widget**, the SDK must be initialized before the widget loads. 
+
+**Important:** For both Button and Modal widgets, you must use `widget_type: "modal"` in the plugin.manifest.json. Do not use `widget_type: "button"` - always use `"modal"` for both types.
+
+```javascript
+{
+        "location": "invoice.details.button",
+        "widget_type": "modal",
+        "name": "Finance Extension",
+        "url": "/app/widget.html",
+        "logo": "/app/img/logo.png"
+}
+```
+
+**Important:** For Button Widgets:
+- Zoho automatically creates the button in the UI (e.g., on invoice details page)
+- When the user clicks that Zoho-provided button, your widget HTML loads
+- **Do NOT create buttons inside your widget HTML** - the widget should automatically fetch and display data when it loads
+- The widget HTML should contain only the content to display, not interactive buttons
+
+Use the following SDK method to adjust the widget size after initialization:
+
+**Important:** The RESIZE method does not support "auto" values. Always specify width and height in pixels (px).
+
+```javascript
+ZFAPPS.invoke("RESIZE", { width: "", height: "" });
+```
+
+---
+
+## Event Listeners
+
+**Important:** Event listeners work differently based on widget location and type:
+
+- **Creation Pages:** Use `ON_INVOICE_CHANGE`, `ON_ESTIMATE_CHANGE`, etc. (e.g., `invoice.creation.sidebar`)
+- **Details Pages - Sidebar Widgets Only:** Use `ON_INVOICE_PREVIEW`, `ON_CUSTOMER_PREVIEW`, `ON_ESTIMATE_PREVIEW`, etc. (e.g., `invoice.details.sidebar`)
+- **Details Pages - Button/Modal Widgets:** Preview events do **NOT** work for button/modal widgets (e.g., `invoice.details.button`)
+- **List Pages:** Event listeners do NOT work in list pages (e.g., `invoice.list.sidebar`)
+
+### Preview Events in Details Pages (Sidebar Widgets Only)
+
+**Important:** Preview events **only work for sidebar widgets** in details pages. They do **NOT** work for button/modal widgets.
+
+In **details page sidebar widgets**, use preview events that automatically fire when the user navigates to different records. These events automatically reload the widget with the latest selected record data:
+
+- `ON_INVOICE_PREVIEW` - Fires when invoice changes in invoice details page (sidebar widgets only)
+- `ON_CUSTOMER_PREVIEW` - Fires when customer changes in customer details page (sidebar widgets only)
+- `ON_ESTIMATE_PREVIEW` - Fires when estimate changes in estimate details page (sidebar widgets only)
+- `ON_VENDOR_PREVIEW` - Fires when vendor changes in vendor details page (sidebar widgets only)
+
+**Benefits:**
+- Widgets automatically reload when user navigates to different records
+- No need to manually refresh the widget
+- Latest selected information is automatically provided
+
+### Usage Example for Details Page Sidebar Widgets:
+
+```javascript
+window.onload = function () {
+    ZFAPPS.extension.init().then(async (zapp) => {
+        // Initial load
+        await loadWidgetData();
+        
+        // Listen for preview events to auto-reload widget (sidebar widgets only)
+        zapp.instance.on("ON_INVOICE_PREVIEW", async (invoice) => {
+            await loadWidgetData(invoice);
+        });
+    });
+};
+
+async function loadWidgetData(invoiceData = null) {
+    // If invoice data provided from event, use it directly
+    // Otherwise, fetch using ZFAPPS.get()
+    const invoice = invoiceData || (await ZFAPPS.get('invoice')).invoice;
+    // Update widget with invoice data
+}
+```
+
+### Button/Modal Widgets in Details Pages
+
+**Important:** Button and modal widgets (`invoice.details.button`, etc.) do **NOT** support preview events. They only load data when the widget is first opened. Users need to manually close and reopen the modal to see updated data when navigating to different records.
+
+### Change Events in Creation Pages
+
+In **creation pages**, use change events that fire when user edits the form:
+
+- `ON_INVOICE_CHANGE` - Fires when invoice form fields change
+- `ON_ESTIMATE_CHANGE` - Fires when estimate form fields change
+- `ON_CUSTOMER_CHANGE` - Fires when customer form fields change
+
+### Event Payload Format
+
+- SDK events such as `ON_INVOICE_CHANGE`, `ON_INVOICE_PREVIEW`, `ON_INVOICE_PRE_SAVE`, `ON_ESTIMATE_CHANGE`, `ON_CUSTOMER_PREVIEW`, etc. deliver the **exact record JSON** for that module.
+- The payload is already the module data object (or contains it at the top level). Do **not** expect an extra wrapper like `payload.data.invoice`.
+- Always read the module fields directly from the object provided by the event callback, and avoid unnecessary destructuring that assumes nested `data` structures.
+
+**Examples:**
+
+```javascript
+// Creation page - Change event
+zapp.instance.on("ON_INVOICE_CHANGE", async (invoice) => {
+    console.log(invoice.invoice_number); // direct access, no payload.data wrapper
+});
+
+// Details page - Preview event
+zapp.instance.on("ON_INVOICE_PREVIEW", async (invoice) => {
+    console.log(invoice.invoice_number); // direct access, invoice object provided directly
+    await loadWidgetData(invoice); // Use invoice data directly
+});
+
+// Customer details page - Preview event
+zapp.instance.on("ON_CUSTOMER_PREVIEW", async (customer) => {
+    console.log(customer.customer_name); // direct access, customer object provided directly
+});
+```
+
+- Events like `ON_INVOICE_CHANGE` can fire multiple times while the user edits or when you update fields via `ZFAPPS.set`. Make shared handlers (e.g., used for both change and pre-save) **idempotent**: compare current values before writing, or track whether your automation already ran to avoid loops or duplicate line items.
+- When you mutate module data using `ZFAPPS.set`, execute the setter **only** if the new value differs from the current value, and prefer updating the existing record object so subsequent handlers receive the correct state.
+- When updating line items (for surcharges, fees, etc.), send only the specific line payloads to `ZFAPPS.set("invoice.line_items", [...])` rather than replacing the entire array, and guard re-entrant flows (e.g., with an `isApplying` flag) so SDK-triggered change events do not reapply your logic.
+
+---
+
+## Getting Data from List Pages
+
+**Important:** For widgets placed in **list page locations** (e.g., `customer.list.sidebar`, `invoice.list.sidebar`, `vendor.list.sidebar`), you must use the **plural form** of the module name when calling `ZFAPPS.get()`. However, for customer list pages, use `"contacts"` instead of `"customers"`.
+
+### Examples:
+
+- **List Pages:** Use plural form
+  - `customer.list.sidebar` → Use `ZFAPPS.get("contacts")` (not `"customer"` or `"customers"`)
+  - `invoice.list.sidebar` → Use `ZFAPPS.get("invoices")` (not `"invoice"`)
+  - `vendor.list.sidebar` → Use `ZFAPPS.get("vendors")` (not `"vendor"`)
+  - `estimate.list.sidebar` → Use `ZFAPPS.get("estimates")` (not `"estimate"`)
+
+- **Details/Creation Pages:** Use singular form
+  - `customer.details.sidebar` → Use `ZFAPPS.get("contact")`  (not `"customer"` or `"customers"`)`
+  - `invoice.creation.sidebar` → Use `ZFAPPS.get("invoice")`
+  - `vendor.details.sidebar` → Use `ZFAPPS.get("vendor")`
+
+### Code Example for Customer List Pages:
+
+```javascript
+// For customer.list.sidebar widget
+async function loadCustomerDetails() {
+    // Use "contacts" for customer list pages
+    const response = await ZFAPPS.get("contacts");
+    const contactsArray = response.contacts; // Response is an array
+    
+    // Note: contacts is an array, loop through to get individual contact data
+    if (contactsArray && Array.isArray(contactsArray) && contactsArray.length > 0) {
+        // Get the first contact (or selected contact)
+        const contactData = contactsArray[0];
+        
+        // Note: When using "contacts", the fields are contact_name, contact_id, etc.
+        // NOT customer_name, customer_id
+        if (contactData && contactData.contact_id) {
+            // Use contact data
+            console.log(contactData.contact_name);
+            console.log(contactData.contact_id);
+            
+            // When creating invoice, use contact_id as customer_id
+            const invoiceData = {
+                customer_id: contactData.contact_id,
+                // ... other invoice fields
+            };
+        }
+        
+        // Or loop through all contacts if needed
+        // contactsArray.forEach(contact => {
+        //     console.log(contact.contact_name);
+        // });
+    }
+}
+```
+
+**Important:** When using `ZFAPPS.get("contacts")` for customer list pages:
+- Response is an **array**: `response.contacts` is an array of contact objects
+- Loop through the array to get individual contact data
+- Response fields use `contact_` prefix: `contact_name`, `contact_id`, `contact_email`, etc.
+- **NOT** `customer_name`, `customer_id`, etc.
+- When creating invoices or other records, use `contact_id` as the `customer_id` value
+
+### Code Example for Other List Pages:
+
+```javascript
+// For invoice.list.sidebar widget
+async function loadInvoiceDetails() {
+    // Use plural form for other list pages
+    const response = await ZFAPPS.get("invoices");
+    const invoiceData = response.invoices;
+    
+    if (invoiceData && invoiceData.invoice_id) {
+        console.log(invoiceData.invoice_number);
+    }
+}
+
+
+**Note:** The response object key also matches the form used:
+- Customer list pages: `response.contacts`
+- Other list pages: `response.invoices`, `response.vendors`, `response.estimates`
+- Details/Creation pages: `response.customer`, `response.invoice`, `response.vendor`
+
+---
+
+## Global Fields Configuration Widget
+
+For widgets placed in `plugin.globalfields` location (configuration/settings widgets):
+
+1. **Save Button:** 
+   - Zoho Books provides a built-in save button in the UI
+   - **Do NOT create a custom save button** in your widget HTML
+   - Use the `ON_SETTINGS_WIDGET_PRE_SAVE` event to handle save operations
+
+2. **Event Handler:**
+   - Listen to `ON_SETTINGS_WIDGET_PRE_SAVE` event to save configuration data
+   - This event is triggered when the user clicks the save button provided by Zoho Books UI
+
+```javascript
+window.onload = function () {
+    ZFAPPS.extension.init().then(async (zapp) => {
+        // Load existing configuration
+        await loadExistingConfiguration();
+        
+        // Listen to settings widget pre-save event
+        zapp.instance.on("ON_SETTINGS_WIDGET_PRE_SAVE", async () => {
+            await saveConfiguration();
+        });
+    });
+};
+```
+
+3. **Storing in Global Fields:**
+   - Use the `/settings/orgvariables/{placeholder}` API endpoint to store values
+   - Placeholder format: `vl__{field_name}` (e.g., `vl__user_name`)
+   - Use PUT method to create/update global variables
+
+```javascript
+async function saveConfiguration() {
+    const placeholder = `vl__user_name`;
+    await ZFAPPS.request({
+        url: `${api_root_endpoint}/settings/orgvariables/${placeholder}`,
+        method: "PUT",
+        connection_link_name: "books",
+        url_query: [
+            {
+                key: 'organization_id',
+                value: organization_id
+            }
+        ],
+        body: {
+            mode: "raw",
+            raw: JSON.stringify({
+                variable: {
+                    value: fieldValue
+                }
+            })
+        }
+    });
+}
+```
+
+4. **Retrieving Global Fields:**
+   - Use GET method to retrieve stored values
+
+```javascript
+async function loadConfiguration() {
+    const placeholder = `vl__user_name`;
+    const response = await ZFAPPS.request({
+        url: `${api_root_endpoint}/settings/orgvariables/${placeholder}`,
+        method: "GET",
+        connection_link_name: "books",
+        url_query: [
+            {
+                key: 'organization_id',
+                value: organization_id
+            }
+        ]
+    });
+    
+    if (response && response.variable && response.variable.value) {
+        return response.variable.value;
+    }
+}
+```
+
+5. **Manifest Configuration:**
+   - The `config` array in `plugin-manifest.json` is **NOT used** for storing data
+   - Keep `config` as an empty array: `"config": []`
+   - Global fields are stored via API calls, not through the manifest config array
+
+
+

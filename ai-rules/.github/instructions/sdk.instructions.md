@@ -1,6 +1,7 @@
 ---
-alwaysApply: true
+applyTo: "**"
 ---
+
 # SDK Rules
 
 ## Initialization

@@ -1,20 +1,16 @@
----
-alwaysApply: true
----
-
 ## Project Overview
 This repository contains sample Zoho Finance widgets for **Books**, **Inventory**, **Billing**, and **Invoice** modules.
 Widgets are implemented using different frameworks — **Vue**, **React**, **Preact**, and **Vanilla JS**.
 
 AI assistants must follow the rules defined in this file and in the additional rule files located under:
-`AI-rules/sdk.mdc` and `AI-rules/location.mdc`.
+`.claude/rules/sdk.md` and `.claude/rules/location.md`.
 
 ---
 
 ## Global Rules
 - Follow Zoho’s widget development and manifest configuration standards.
-- When editing `plugin.manifest.json`, always include the `"location"` field (refer to `AI-rules/location.md`).
-- Validate API calls using Zoho SDK guidelines (refer to `AI-rules/sdk.md`).
+- When editing `plugin.manifest.json`, always include the `"location"` field (refer to `.claude/rules/location.md`).
+- Validate API calls using Zoho SDK guidelines (refer to `.claude/rules/sdk.md`).
 - If SDK methods are unavailable for a module, provide a descriptive error message with a reference link.
 - Maintain proper JSON structure and indentation when modifying manifest files.
 - Always use professional, consistent comments in generated code.
@@ -36,6 +32,6 @@ AI assistants must follow the rules defined in this file and in the additional r
 ---
 
 ## Related Rule Files
-- [SDK Rules](AI-rules/sdk.mdc)
-- [Location Rules](AI-rules/location.mdc)
-- [Vue.js Widget Rules](AI-rules/vue.mdc) - **Use this for all Vue.js widget development**
+- [SDK Rules](rules/sdk.md)
+- [Location Rules](rules/location.md)
+- [Vue.js Widget Rules](rules/vue.md) - **Use this for all Vue.js widget development**

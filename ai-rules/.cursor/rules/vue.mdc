@@ -1,6 +1,8 @@
 ---
+description: Vue.js widget development rules for Zoho Finance
 alwaysApply: true
 ---
+
 # Vue.js Widget Development Rules
 
 ## Overview

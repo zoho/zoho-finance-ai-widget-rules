@@ -1,88 +1,100 @@
 # AI Rules for Zoho Finance Widgets
 
-This directory contains AI assistant rules for developing Zoho Finance widgets. These rules ensure consistent code generation, proper SDK usage, and adherence to Zoho's widget development standards.
-
-**Compatible with:** Cursor, GitHub Copilot, ChatGPT, Gemini, and other AI coding assistants that support rule files.
+Rules for developing Zoho Finance widgets. The same rules are provided in the format each assistant loads: Cursor, Claude Code, and GitHub Copilot.
 
 ---
 
-## 🚀 Quick Setup
+## Quick Setup
 
-### Step 1: Clone or Copy the Rules
-
-If you're cloning this repository:
+Clone this repository:
 
 ```bash
 git clone https://github.com/zoho/zoho-finance-ai-widget-rules.git
 cd zoho-finance-ai-widget-rules
 ```
 
-### Step 2: Here's how to add our Zoho Finance widget rules to Cursor AI:
+Copy the folder for the assistant you use into your widget project. Each set contains the same four rules: project overview, SDK, widget locations, and Vue.js.
 
-#### **Example: Adding Rules in Cursor IDE**
+### Cursor
 
-1. **Open Cursor Settings**
-   - Press `Cmd + ,` (macOS) or `Ctrl + ,` (Windows/Linux)
-   - Or navigate: `Cursor > Settings` → Search for **"Rules and Commands"**
+Copy `ai-rules/.cursor` to the root of your widget project so the project contains `.cursor/rules/`.
 
-2. **Go to Project Rules**
-   - Click on **"Rules and Commands"** in the left sidebar
-   - Select the **"Project Rules"** tab
+```bash
+cp -R ai-rules/.cursor /path/to/your-widget-project/
+```
 
-3. **Copy Rules to .cursor/rules Folder**
-   - In your project root, create: `.cursor/rules/` folder
-   - Copy all `.mdc` files from this repo's `ai-rules/` folder
-   - Paste them into `.cursor/rules/` folder
+Cursor loads every file in `.cursor/rules/` with `alwaysApply: true`:
 
-4. **Add Rules in Settings UI**
-   - In `Settings → Rules and Commands → Project Rules`
-   - Click **"+"** or **"Add Rule"** button
-   - **Example for SDK Rules:**
-     - Open `ai-rules/rules/sdk.mdc` file
-     - Copy all content
-     - Paste into the new rule editor
-     - Name it: "Zoho Finance SDK Rules"
-     - Click **Save**
-   
-   - **Example for Location Rules:**
-     - Click **"Add Rule"** again
-     - Open `ai-rules/rules/location.mdc` file
-     - Copy all content
-     - Paste into the new rule editor
-     - Name it: "Zoho Finance Widget Locations"
-     - Click **Save**
-   
-   - **Example for Additional Rules:**
-     - Click **"Add Rule"** again
-     - Open `ai-rules/ai-rule-.mdc` file
-     - Copy all content
-     - Paste into the new rule editor
-     - Name it: "Zoho Finance Additional Rules"
-     - Click **Save**
+| File | Rule |
+| --- | --- |
+| `.cursor/rules/project.mdc` | Project overview and global rules |
+| `.cursor/rules/sdk.mdc` | Zoho Finance SDK usage |
+| `.cursor/rules/location.mdc` | Widget locations, module keys, and events |
+| `.cursor/rules/vue.mdc` | Vue.js widget development |
 
-5. **Verify Rules Are Active**
-   - You should see all three rules in the Project Rules list
-   - Ensure toggle switches are **ON** (enabled)
-   - Rules are now active! Start coding and Cursor AI will follow these rules.
+In Cursor, open **Settings → Rules and Commands → Project Rules** and confirm all four rules are enabled.
+
+### Claude Code
+
+Copy `ai-rules/.claude` to the root of your widget project so the project contains `.claude/CLAUDE.md` and `.claude/rules/`.
+
+```bash
+cp -R ai-rules/.claude /path/to/your-widget-project/
+```
+
+Claude Code loads these files at the start of every session:
+
+| File | Rule |
+| --- | --- |
+| `.claude/CLAUDE.md` | Project overview and global rules |
+| `.claude/rules/sdk.md` | Zoho Finance SDK usage |
+| `.claude/rules/location.md` | Widget locations, module keys, and events |
+| `.claude/rules/vue.md` | Vue.js widget development |
+
+### GitHub Copilot
+
+Copy `ai-rules/.github` to the root of your widget project so the project contains `.github/copilot-instructions.md` and `.github/instructions/`.
+
+```bash
+cp -R ai-rules/.github /path/to/your-widget-project/
+```
+
+| File | Rule |
+| --- | --- |
+| `.github/copilot-instructions.md` | Project overview and global rules |
+| `.github/instructions/sdk.instructions.md` | Zoho Finance SDK usage |
+| `.github/instructions/location.instructions.md` | Widget locations, module keys, and events |
+| `.github/instructions/vue.instructions.md` | Vue.js widget development |
+
+`copilot-instructions.md` applies to every Copilot request. The files in `.github/instructions/` use `applyTo: "**"`, so they apply across the project as well.
 
 ---
 
-## 📁 What's Included
-
-The folder structure is:
+## What's Included
 
 ```
 ai-rules/
-  ├── ai-rule-.mdc
-  └── rules/
-      ├── location.mdc
-      └── sdk.mdc
+├── .cursor/
+│   └── rules/
+│       ├── project.mdc
+│       ├── sdk.mdc
+│       ├── location.mdc
+│       └── vue.mdc
+├── .claude/
+│   ├── CLAUDE.md
+│   └── rules/
+│       ├── sdk.md
+│       ├── location.md
+│       └── vue.md
+└── .github/
+    ├── copilot-instructions.md
+    └── instructions/
+        ├── sdk.instructions.md
+        ├── location.instructions.md
+        └── vue.instructions.md
 ```
 
-- **`ai-rules/rules/sdk.mdc`** - Zoho Finance SDK rules: Proper initialization, API calls, event handling
-- **`ai-rules/rules/location.mdc`** - Widget Locations: All available widget placement locations and module data structures
-- **`ai-rules/ai-rule-.mdc`** - Additional AI rules
-
-
----
-
+- **Project overview** — Global widget rules, manifest expectations, and links to the other rule files.
+- **SDK** — Initialization, allowed SDK methods, API calls, notifications, events, and global fields.
+- **Locations** — Widget placement locations and the module data keys and events for each location.
+- **Vue.js** — Vue 2 widget structure, ZFAPPS initialization, services, mixins, and build configuration.
